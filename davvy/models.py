@@ -13,9 +13,9 @@ class Resource(models.Model):
     def generate_uuid():
         return str(uuid.uuid4())
 
-    user = models.ForeignKey(User)
-    groups = models.ManyToManyField(Group, null=True, blank=True)
-    parent = models.ForeignKey('Resource', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    groups = models.ManyToManyField(Group)
+    parent = models.ForeignKey('Resource', null=True, blank=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     collection = models.BooleanField(default=False)
     uuid = models.CharField(max_length=36, default=generate_uuid)
@@ -36,6 +36,10 @@ class Resource(models.Model):
             parent = parent.parent
         parts.append(self.name)
         return '/' + '/'.join(parts)
+
+    def __str__(self):
+
+        return "{}".format(self.name)
 
     def del_prop(self, dav, request, name):
         try:
@@ -121,12 +125,15 @@ class Resource(models.Model):
 
 class Prop(models.Model):
 
-    resource = models.ForeignKey(Resource)
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     value = models.TextField(blank=True, null=True)
     is_xml = models.BooleanField(default=False)
 
     def __unicode__(self):
+        return self.name
+
+    def __str__(self):
         return self.name
 
     class Meta:

@@ -29,7 +29,7 @@ class CalDAV(WebDAV):
         return super(CalDAV, self).put(request, user, resource_name)
 
     def mkcalendar(self, request, user, resource_name):
-
+        print("===== RESOURCE NAME {}".format(resource_name))
         resource = self.get_resource(
             request, user, resource_name, create=True, collection=True, strict=True
         )
@@ -37,7 +37,7 @@ class CalDAV(WebDAV):
         cl = int(request.META.get('CONTENT_LENGTH', '0'))
         if cl > 0:
             try:
-                dom = etree.fromstring(request.read())
+                dom = etree.fromstring(request.read().decode())
             except:
                 raise davvy.exceptions.BadRequest()
 

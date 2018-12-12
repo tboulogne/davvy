@@ -10,7 +10,7 @@ from davvy.models import Resource
 import base64
 import types
 from django.conf import settings
-from storage import FSStorage
+from davvy.storage import FSStorage
 from re import sub, compile
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -43,6 +43,8 @@ class WebDAV(View):
     @csrf_exempt
     def dispatch(self, request, username, *args, **kwargs):
         user = None
+        print(request.body.decode())
+
         # REMOTE_USER should be always honored
         if 'REMOTE_USER' in request.META:
             user = User.objects.get(username=request.META['REMOTE_USER'])
@@ -50,7 +52,10 @@ class WebDAV(View):
             auth = request.META['HTTP_AUTHORIZATION'].split()
             if len(auth) == 2:
                 if auth[0].lower() == "basic":
-                    uname, passwd = base64.b64decode(auth[1]).split(':')
+                    try:
+                        uname, passwd = base64.b64decode(auth[1]).split(':')
+                    except:
+                        uname, passwd = base64.b64decode(auth[1]).decode().split(':')
                     user = authenticate(username=uname, password=passwd)
 
         def _check_group_sharing(user, sharing_user):
@@ -350,20 +355,20 @@ class WebDAV(View):
 
     def _propfinder(self, request, user, resource_name, shared=False):
         resource = self.get_resource(request, user, resource_name)
-
+        print("===== TAG 1 {}".format(resource.progenitor))
         try:
             dom = etree.fromstring(request.read())
         except:
             raise davvy.exceptions.BadRequest()
 
         logger.debug(etree.tostring(dom, pretty_print=True))
-
+        print("===== TAG 1 {}".format(shared))
         props = dom.find('{DAV:}prop')
         requested_props = [prop.tag for prop in props]
         depth = request.META.get('HTTP_DEPTH', 'infinity')
 
         doc = etree.Element('{DAV:}multistatus')
-
+        print("===== TAG 2")
         multistatus_response = self._propfind_response(
             request,
             request.path,
@@ -371,22 +376,23 @@ class WebDAV(View):
             requested_props
         )
         doc.append(multistatus_response)
-
+        print("===== TAG 3")
         if depth == '1':
             resources = Resource.objects.filter(parent=resource)
-
+            print("===== TAG 4 {}".format(request.user.groups.all()))
             if shared:  # we skip it if unnecessary
                 # add shared resources from groups
                 shared_resources = Resource.objects.filter(
-                    groups=request.user.groups.all()
+                    groups=request.user.groups.all().first()
                 )
-
+                print("===== TAG 5 {}".format(shared_resources))
                 # consider only shared resources having the same progenitor
                 # so, if resource is a calendar, only calendars, and so on...
-                resource_progenitor = resource.progenitor.name if resource.progenitor else self.root
+
+                resource_progenitor = resource.progenitor.name if resource.progenitor is not None else self.root
                 shared_resources_id = [r.id
                                        for r in shared_resources
-                                       if r.progenitor.name == resource_progenitor
+                                       #if r.progenitor.name == resource_progenitor
                                        ]
 
                 resources |= shared_resources.filter(

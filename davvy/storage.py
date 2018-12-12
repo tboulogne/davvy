@@ -15,12 +15,18 @@ class FSStorage(object):
             os.mkdir(directory)
         filename = os.path.join(directory, resource.uuid)
         f = open(filename, 'w')
-        cl = long(resource.size)
+        cl = int(resource.size)
         while cl > 0:
-            chunk = request.read(min(cl, chunk_size))
+            try:
+                chunk = request.read(min(cl, chunk_size))
+            except:
+                chunk = request.read(min(cl, chunk_size)).decode()
             if len(chunk) == 0:
                 break
-            f.write(chunk)
+            try:
+                f.write(chunk)
+            except:
+                f.write(chunk.decode())
             cl -= len(chunk)
         f.close()
 
