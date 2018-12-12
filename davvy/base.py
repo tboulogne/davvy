@@ -355,20 +355,17 @@ class WebDAV(View):
 
     def _propfinder(self, request, user, resource_name, shared=False):
         resource = self.get_resource(request, user, resource_name)
-        print("===== TAG 1 {}".format(resource.progenitor))
         try:
             dom = etree.fromstring(request.read())
         except:
             raise davvy.exceptions.BadRequest()
 
         logger.debug(etree.tostring(dom, pretty_print=True))
-        print("===== TAG 1 {}".format(shared))
         props = dom.find('{DAV:}prop')
         requested_props = [prop.tag for prop in props]
         depth = request.META.get('HTTP_DEPTH', 'infinity')
 
         doc = etree.Element('{DAV:}multistatus')
-        print("===== TAG 2")
         multistatus_response = self._propfind_response(
             request,
             request.path,
@@ -376,16 +373,13 @@ class WebDAV(View):
             requested_props
         )
         doc.append(multistatus_response)
-        print("===== TAG 3")
         if depth == '1':
             resources = Resource.objects.filter(parent=resource)
-            print("===== TAG 4 {}".format(request.user.groups.all()))
             if shared:  # we skip it if unnecessary
                 # add shared resources from groups
                 shared_resources = Resource.objects.filter(
                     groups=request.user.groups.all().first()
                 )
-                print("===== TAG 5 {}".format(shared_resources))
                 # consider only shared resources having the same progenitor
                 # so, if resource is a calendar, only calendars, and so on...
 
