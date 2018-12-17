@@ -26,6 +26,7 @@ class CalDAV(WebDAV):
     def put(self, request, user, resource_name):
         if not request.META['CONTENT_TYPE'].startswith('text/calendar;') and request.META['CONTENT_TYPE'] != 'text/calendar':
             return HttpResponseForbidden()
+            print(" ===== HERE ==== ")
         return super(CalDAV, self).put(request, user, resource_name)
 
     def mkcalendar(self, request, user, resource_name):

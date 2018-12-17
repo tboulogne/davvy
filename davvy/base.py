@@ -43,7 +43,7 @@ class WebDAV(View):
     @csrf_exempt
     def dispatch(self, request, username, *args, **kwargs):
         user = None
-        print(request.body.decode())
+
 
         # REMOTE_USER should be always honored
         if 'REMOTE_USER' in request.META:
@@ -58,11 +58,16 @@ class WebDAV(View):
                         uname, passwd = base64.b64decode(auth[1]).decode().split(':')
                     user = authenticate(username=uname, password=passwd)
 
+
         def _check_group_sharing(user, sharing_user):
+            print("======= USERN USER ==== {} - {}".format(username, user))
             try:
                 sharing_user = User.objects.get(username=username)
-                return sharing_user.groups.all() & user.groups.all()
+                a = set(sharing_user.groups.all())
+                b = set(user.groups.all())
+                return a & b
             except ObjectDoesNotExist:
+
                 return None
 
         if (user and user.is_active) and (
@@ -82,10 +87,11 @@ class WebDAV(View):
                 response.status_code = int(code)
                 response.reason_phrase = phrase
         else:
-            response = HttpResponse('Unathorized', content_type='text/plain')
+
+            response = HttpResponse('Unauthorized', content_type='text/plain')
             response.status_code = 401
             response['WWW-Authenticate'] = 'Basic realm="davvy"'
-
+            print("======= SHARE ==== {}".format(response))
         return response
 
     def options(self, request, user, resource_name):
@@ -93,6 +99,7 @@ class WebDAV(View):
         response['Allow'] = ','.join(
             [method.upper() for method in self.http_method_names]
         )
+        print("======= OPTIONS ==== {}".format(response))
         return response
 
     def head(self, request, user, resource_name):
@@ -302,7 +309,7 @@ class WebDAV(View):
         except:
             scheme = request.META['wsgi.url_scheme']
 
-        multistatus_response_href.text = scheme + \
+        multistatus_response_href.text = 'scheme' + \
             '://' + request.META['HTTP_HOST'] + href
         multistatus_response.append(multistatus_response_href)
 
@@ -359,8 +366,8 @@ class WebDAV(View):
             dom = etree.fromstring(request.read())
         except:
             raise davvy.exceptions.BadRequest()
-
-        logger.debug(etree.tostring(dom, pretty_print=True))
+        #print(etree.tostring(dom, pretty_print=True))
+        #logger.debug(etree.tostring(dom, pretty_print=True))
         props = dom.find('{DAV:}prop')
         requested_props = [prop.tag for prop in props]
         depth = request.META.get('HTTP_DEPTH', 'infinity')
@@ -374,12 +381,15 @@ class WebDAV(View):
         )
         doc.append(multistatus_response)
         if depth == '1':
+            print("==== PARENT ===  {}".format(resource))
             resources = Resource.objects.filter(parent=resource)
             if shared:  # we skip it if unnecessary
                 # add shared resources from groups
                 shared_resources = Resource.objects.filter(
-                    groups=request.user.groups.all().first()
+                   groups=request.user.groups.all().first()
                 )
+
+                print("==== SHARED ===  {}".format(shared_resources))
                 # consider only shared resources having the same progenitor
                 # so, if resource is a calendar, only calendars, and so on...
 
@@ -388,7 +398,7 @@ class WebDAV(View):
                                        for r in shared_resources
                                        #if r.progenitor.name == resource_progenitor
                                        ]
-
+                print("==== SHARED ID===  {}".format(shared_resources_id))
                 resources |= shared_resources.filter(
                     id__in=shared_resources_id)
 
@@ -405,7 +415,7 @@ class WebDAV(View):
                 )
                 doc.append(multistatus_response)
 
-        logger.debug("%s", etree.tostring(doc, pretty_print=True))
+        #logger.debug("%s", etree.tostring(doc, pretty_print=False))
 
         response = HttpResponse(
             etree.tostring(doc, pretty_print=True),
@@ -414,6 +424,7 @@ class WebDAV(View):
 
         response.status_code = 207
         response.reason_phrase = 'Multi-Status'
+
         return response
 
     def proppatch(self, request, user, resource_name):
@@ -510,6 +521,7 @@ class WebDAV(View):
                 )
             else:
                 raise davvy.exceptions.NotFound()
+        print("===== RES {}".format(resource.__dict__))
         return resource
 
 

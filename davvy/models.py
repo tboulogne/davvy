@@ -39,7 +39,15 @@ class Resource(models.Model):
 
     def __str__(self):
 
-        return "{}".format(self.name)
+        parts = []
+        parent = self.parent
+        while True:
+            if not parent:
+                break
+            parts.insert(0, Resource.objects.get(pk=parent.id).name)
+            parent = parent.parent
+        parts.append(self.name)
+        return '/' + '/'.join(parts)
 
     def del_prop(self, dav, request, name):
         try:
@@ -102,6 +110,7 @@ class Resource(models.Model):
         parent = self.parent
         while parent and parent.parent:
             parent = parent.parent
+        print("==== PARENT PROG === {}".format(parent))
         return parent
 
     def properties(self, dav, request, requested_props):

@@ -13,10 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class WellKnownDAV(WebDAV):
-
     @csrf_exempt
     def dispatch(self, request, *args, **kwargs):
-
         user = None
         if 'REMOTE_USER' in request.META:
             user = User.objects.get(username=request.META['REMOTE_USER'])
@@ -24,7 +22,10 @@ class WellKnownDAV(WebDAV):
             auth = request.META['HTTP_AUTHORIZATION'].split()
             if len(auth) == 2:
                 if auth[0].lower() == "basic":
-                    uname, passwd = base64.b64decode(auth[1]).split(':')
+                    try:
+                        uname, passwd = base64.b64decode(auth[1]).split(':')
+                    except:
+                        uname, passwd = base64.b64decode(auth[1]).decode().split(':')
                     user = authenticate(username=uname, password=passwd)
 
         if (user and user.is_active):
@@ -57,8 +58,10 @@ class WellKnownDAV(WebDAV):
                 response = super(WebDAV, self).dispatch(
                     request, user.username, "/", *args, **kwargs
                 )
+                print(response.__dict__)
                 dav_base = ['1']
                 dav_base += getattr(settings, 'DAVVY_EXTENSIONS', [])
+
                 response['Dav'] = ','.join(dav_base + self.dav_extensions)
             except Exception as e:
                 logger.debug(e)
@@ -74,8 +77,8 @@ class WellKnownDAV(WebDAV):
                     )
 
         else:
-            response = HttpResponse('Unathorized', content_type='text/plain')
+            response = HttpResponse('Unauthorized', content_type='text/plain')
             response.status_code = 401
             response['WWW-Authenticate'] = 'Basic realm="davvy"'
-
+        #print(response._container)
         return response
